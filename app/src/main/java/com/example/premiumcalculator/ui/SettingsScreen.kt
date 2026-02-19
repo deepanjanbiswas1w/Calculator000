@@ -72,7 +72,7 @@ fun SettingsScreen(navController: NavController) {
             Text("Decimal Places (2, 4, 6)", modifier = Modifier.padding(top = 16.dp))
             Slider(
                 value = precision.toFloat(),
-                onValueChange = { scope.launch { context.dataStore.edit { it[PRECISION_KEY] = it.toInt() } } },
+                onValueChange = { scope.launch { context.dataStore.edit { it[PRECISION_KEY] = precision.toInt() } } },
                 valueRange = 2f..6f,
                 steps = 1
             )
