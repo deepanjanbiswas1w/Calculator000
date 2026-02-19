@@ -32,38 +32,41 @@ import androidx.navigation.NavController
 import com.example.premiumcalculator.viewmodel.CalculatorViewModel
 import kotlinx.coroutines.launch
 
-// Fixed naming conflict: renamed data class to KeypadButtonData
 data class KeypadButtonData(
-    val text: String,
+    val display: String,
+    val command: String,
     val isOperator: Boolean = false,
-    val special: Boolean = false
+    val special: Boolean = false,
+    val useIcon: Boolean = false
 )
+
+data class ProToolData(val icon: ImageVector, val title: String, val subtitle: String, val route: String)
 
 private val fullProToolsList = listOf(
-    ProTool(Icons.Default.HealthAndSafety, "BMI/Health", "Track health", "bmi"),
-    ProTool(Icons.Default.AttachMoney, "Investment", "Compound interest", "investment"),
-    ProTool(Icons.Default.LocalGasStation, "Fuel Cost", "Trip optimizer", "fuel"),
-    ProTool(Icons.Default.CompareArrows, "Unit Price", "Deal finder", "unit_price"),
-    ProTool(Icons.Default.School, "GPA/CGPA", "Grade calc", "gpa"),
-    ProTool(Icons.Default.CurrencyExchange, "Currency", "Live rates", "currency"),
-    ProTool(Icons.Default.Cake, "Age Calculator", "Precise age", "age"),
-    ProTool(Icons.Default.Calculate, "EMI Calculator", "Loan planner", "emi"),
-    ProTool(Icons.Default.Functions, "Equation Solver", "Math problems", "solver")
+    ProToolData(Icons.Default.HealthAndSafety, "BMI/Health", "Track health", "bmi"),
+    ProToolData(Icons.Default.AttachMoney, "Investment", "Compound interest", "investment"),
+    ProToolData(Icons.Default.LocalGasStation, "Fuel Cost", "Trip optimizer", "fuel"),
+    ProToolData(Icons.Default.CompareArrows, "Unit Price", "Deal finder", "unit_price"),
+    ProToolData(Icons.Default.School, "GPA/CGPA", "Grade calc", "gpa"),
+    ProToolData(Icons.Default.CurrencyExchange, "Currency", "Live rates", "currency"),
+    ProToolData(Icons.Default.Cake, "Age Calculator", "Precise age", "age"),
+    ProToolData(Icons.Default.Calculate, "EMI Calculator", "Loan planner", "emi"),
+    ProToolData(Icons.Default.Functions, "Equation Solver", "Math problems", "solver")
 )
 
-private val keypadButtons = listOf(
-    KeypadButtonData("C", isOperator = true, special = true),
-    KeypadButtonData("⌫", isOperator = true, special = true),
-    KeypadButtonData("%", isOperator = true),
-    KeypadButtonData("÷", isOperator = true),
-    KeypadButtonData("7"), KeypadButtonData("8"), KeypadButtonData("9"), 
-    KeypadButtonData("×", isOperator = true),
-    KeypadButtonData("4"), KeypadButtonData("5"), KeypadButtonData("6"), 
-    KeypadButtonData("−", isOperator = true),
-    KeypadButtonData("1"), KeypadButtonData("2"), KeypadButtonData("3"), 
-    KeypadButtonData("+", isOperator = true),
-    KeypadButtonData("."), KeypadButtonData("0"), KeypadButtonData("="), 
-    KeypadButtonData("")
+private val basicKeypadButtons = listOf(
+    KeypadButtonData("C", "C", isOperator = true, special = true),
+    KeypadButtonData("⌫", "⌫", isOperator = true, special = true, useIcon = true),
+    KeypadButtonData("%", "%", isOperator = true),
+    KeypadButtonData("÷", "÷", isOperator = true),
+    KeypadButtonData("7", "7"), KeypadButtonData("8", "8"), KeypadButtonData("9", "9"), 
+    KeypadButtonData("×", "×", isOperator = true),
+    KeypadButtonData("4", "4"), KeypadButtonData("5", "5"), KeypadButtonData("6", "6"), 
+    KeypadButtonData("−", "−", isOperator = true),
+    KeypadButtonData("1", "1"), KeypadButtonData("2", "2"), KeypadButtonData("3", "3"), 
+    KeypadButtonData("+", "+", isOperator = true),
+    KeypadButtonData(".", "."), KeypadButtonData("0", "0"), KeypadButtonData("=", "=", isOperator = true), 
+    KeypadButtonData("", "")
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,13 +79,16 @@ fun CalculatorScreen(navController: NavController) {
     val expression by viewModel.expression.collectAsState()
     val preview by viewModel.preview.collectAsState()
 
-    var showFeatureSheet by remember { mutableStateOf(false) }
+    var showSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-    val coroutineScope = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
 
-    if (showFeatureSheet) {
+    val keypadButtons = remember { basicKeypadButtons }
+    val proToolsList = remember { fullProToolsList }
+
+    if (showSheet) {
         ModalBottomSheet(
-            onDismissRequest = { showFeatureSheet = false },
+            onDismissRequest = { showSheet = false },
             sheetState = sheetState,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             containerColor = MaterialTheme.colorScheme.surface,
@@ -96,9 +102,9 @@ fun CalculatorScreen(navController: NavController) {
                 ) {
                     Text("Pro Tools", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                     IconButton(onClick = {
-                        coroutineScope.launch { sheetState.hide(); showFeatureSheet = false }
+                        scope.launch { sheetState.hide(); showSheet = false }
                     }) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                        Icon(Icons.Default.Close, "Close")
                     }
                 }
                 HorizontalDivider()
@@ -108,9 +114,9 @@ fun CalculatorScreen(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(items = fullProToolsList, key = { it.title }) { tool ->
+                    items(items = proToolsList, key = { it.title }) { tool ->
                         ProToolCard(tool, navController) {
-                            coroutineScope.launch { sheetState.hide(); showFeatureSheet = false }
+                            scope.launch { sheetState.hide(); showSheet = false }
                         }
                     }
                 }
@@ -123,42 +129,42 @@ fun CalculatorScreen(navController: NavController) {
             CenterAlignedTopAppBar(
                 title = { Text("Pro Calculator", fontWeight = FontWeight.ExtraBold) },
                 actions = {
-                    IconButton(onClick = { showFeatureSheet = true }) {
+                    IconButton(onClick = { showSheet = true }) {
                         Icon(Icons.Default.Widgets, "Features", tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             )
         }
-    ) { innerPadding ->
+    ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)
+            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)
         ) {
             Column(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.Bottom
             ) {
-                Text(expression.ifEmpty { "0" }, fontSize = 42.sp, fontWeight = FontWeight.Light, textAlign = TextAlign.End, maxLines = 2)
-                Spacer(Modifier.height(8.dp))
-                Text(preview.ifEmpty { "" }, fontSize = 64.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, color = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.height(24.dp))
+                Text(expression.ifEmpty { "0" }, fontSize = 44.sp, fontWeight = FontWeight.Light, textAlign = TextAlign.End, maxLines = 2)
+                Spacer(Modifier.height(12.dp))
+                Text(preview.ifEmpty { "" }, fontSize = 68.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, color = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.height(32.dp))
             }
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
-                contentPadding = PaddingValues(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxWidth().weight(1.8f)
             ) {
-                items(items = keypadButtons, key = { it.text }) { button ->
-                    if (button.text.isNotEmpty()) {
-                        KeypadButtonUI(button) {
+                items(items = keypadButtons, key = { it.display + it.command }) { btn ->
+                    if (btn.display.isNotEmpty()) {
+                        KeypadButtonUI(btn) {
                             if (hapticEnabled) {
-                                val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-                                vibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
+                                (context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator)
+                                    ?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
                             }
-                            viewModel.onButtonClick(button.text)
+                            viewModel.onButtonClick(btn.command)
                         }
                     }
                 }
@@ -168,7 +174,7 @@ fun CalculatorScreen(navController: NavController) {
 }
 
 @Composable
-private fun KeypadButtonUI(button: KeypadButtonData, onClick: () -> Unit) {
+private fun KeypadButtonUI(btn: KeypadButtonData, onClick: () -> Unit) {
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (pressed) 0.92f else 1f, label = "scale")
 
@@ -179,24 +185,24 @@ private fun KeypadButtonUI(button: KeypadButtonData, onClick: () -> Unit) {
         },
         shape = CircleShape,
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (button.special) MaterialTheme.colorScheme.errorContainer 
-                            else if (button.isOperator) MaterialTheme.colorScheme.primary 
+            containerColor = if (btn.special) MaterialTheme.colorScheme.errorContainer 
+                            else if (btn.isOperator) MaterialTheme.colorScheme.primary 
                             else MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = if (button.special) MaterialTheme.colorScheme.onErrorContainer 
-                           else if (button.isOperator) MaterialTheme.colorScheme.onPrimary 
+            contentColor = if (btn.special) MaterialTheme.colorScheme.onErrorContainer 
+                           else if (btn.isOperator) MaterialTheme.colorScheme.onPrimary 
                            else MaterialTheme.colorScheme.onSurface
         )
     ) {
-        if (button.text == "⌫") {
-            Icon(Icons.AutoMirrored.Filled.Backspace, "Delete", modifier = Modifier.size(28.dp))
+        if (btn.useIcon) {
+            Icon(Icons.AutoMirrored.Filled.Backspace, "Delete", modifier = Modifier.size(30.dp))
         } else {
-            Text(button.text, fontSize = 28.sp, fontWeight = FontWeight.Medium)
+            Text(btn.display, fontSize = 30.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
 
 @Composable
-private fun ProToolCard(tool: ProTool, navController: NavController, onDismiss: () -> Unit) {
+private fun ProToolCard(tool: ProToolData, navController: NavController, onDismiss: () -> Unit) {
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (pressed) 0.94f else 1f, label = "scale")
 
@@ -208,7 +214,7 @@ private fun ProToolCard(tool: ProTool, navController: NavController, onDismiss: 
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         shape = RoundedCornerShape(28.dp)
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Column(modifier = Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Icon(tool.icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
             Spacer(Modifier.height(8.dp))
             Text(tool.title, fontWeight = FontWeight.Bold, fontSize = 16.sp, textAlign = TextAlign.Center)
@@ -216,5 +222,3 @@ private fun ProToolCard(tool: ProTool, navController: NavController, onDismiss: 
         }
     }
 }
-
-data class ProTool(val icon: ImageVector, val title: String, val subtitle: String, val route: String)
