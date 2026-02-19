@@ -48,7 +48,6 @@ fun CalculatorScreen(navController: NavController) {
     val context = LocalContext.current
     val hapticEnabled by remember { mutableStateOf(true) }
     
-    // StateFlow কে State এ রূপান্তর করা (ফিক্স)
     val expression by viewModel.expression.collectAsState()
     val preview by viewModel.preview.collectAsState()
 
@@ -63,24 +62,26 @@ fun CalculatorScreen(navController: NavController) {
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            Text(
-                text = "Pro Tools",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(16.dp),
-                fontWeight = FontWeight.Bold
-            )
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
-            ) {
-                items(proToolsList) { tool ->
-                    ProToolCard(tool, navController) {
-                        coroutineScope.launch {
-                            sheetState.hide()
-                            showFeatureSheet = false
+            Column(modifier = Modifier.padding(bottom = 32.dp)) {
+                Text(
+                    text = "Pro Tools",
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.padding(16.dp),
+                    fontWeight = FontWeight.Bold
+                )
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 500.dp)
+                ) {
+                    items(fullProToolsList) { tool ->
+                        ProToolCard(tool, navController) {
+                            coroutineScope.launch {
+                                sheetState.hide()
+                                showFeatureSheet = false
+                            }
                         }
                     }
                 }
@@ -156,13 +157,16 @@ fun CalculatorScreen(navController: NavController) {
     }
 }
 
-private val proToolsList = listOf(
+private val fullProToolsList = listOf(
     ProToolData(Icons.Default.HealthAndSafety, "BMI/Health", "Track health", "bmi"),
     ProToolData(Icons.Default.AttachMoney, "Investment", "Compound interest", "investment"),
     ProToolData(Icons.Default.LocalGasStation, "Fuel Cost", "Trip optimizer", "fuel"),
     ProToolData(Icons.Default.CompareArrows, "Unit Price", "Deal finder", "unit_price"),
     ProToolData(Icons.Default.School, "GPA/CGPA", "Grade calc", "gpa"),
-    ProToolData(Icons.Default.CurrencyExchange, "Currency", "Live rates", "currency")
+    ProToolData(Icons.Default.CurrencyExchange, "Currency", "Live rates", "currency"),
+    ProToolData(Icons.Default.Cake, "Age Calculator", "Precise age", "age"),
+    ProToolData(Icons.Default.Calculate, "EMI Calculator", "Loan planner", "emi"),
+    ProToolData(Icons.Default.Functions, "Equation Solver", "Math problems", "solver")
 )
 
 data class ProToolData(val icon: ImageVector, val title: String, val subtitle: String, val route: String)
@@ -182,14 +186,14 @@ private fun ProToolCard(tool: ProToolData, navController: NavController, onDismi
         shape = RoundedCornerShape(28.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(12.dp),
+            modifier = Modifier.fillMaxSize().padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(tool.icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
+            Icon(tool.icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp))
             Spacer(Modifier.height(8.dp))
-            Text(tool.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Text(tool.subtitle, fontSize = 10.sp, textAlign = TextAlign.Center, lineHeight = 12.sp)
+            Text(tool.title, fontWeight = FontWeight.Bold, fontSize = 14.sp, textAlign = TextAlign.Center)
+            Text(tool.subtitle, fontSize = 9.sp, textAlign = TextAlign.Center, lineHeight = 11.sp)
         }
     }
 }
