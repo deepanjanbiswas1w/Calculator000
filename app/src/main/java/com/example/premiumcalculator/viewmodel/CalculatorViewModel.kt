@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.premiumcalculator.repository.HistoryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -39,7 +40,7 @@ class CalculatorViewModel @Inject constructor(
     private val _preview = mutableStateOf("")
     val preview: State<String> = _preview
 
-    private val precision: State<Int> = dataStore.data
+    val precision: StateFlow<Int> = dataStore.data
         .map { it[PRECISION_KEY] ?: 6 }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 6)
 
@@ -51,7 +52,7 @@ class CalculatorViewModel @Inject constructor(
                     val formatted = formatResult(result)
                     _preview.value = formatted
                     viewModelScope.launch {
-                        repository.insert(_expression.value, formatted, "") 
+                        repository.insert(_expression.value, formatted, "")
                     }
                     _expression.value = formatted
                 } catch (e: Exception) {

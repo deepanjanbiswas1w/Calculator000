@@ -29,8 +29,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.flow.map
-import com.example.premiumcalculator.App
-import com.example.premiumcalculator.Theme.dataStore
+import com.example.premiumcalculator.dataStore
 
 private val THEME_KEY = stringPreferencesKey("theme")
 private val HAPTIC_KEY = booleanPreferencesKey("haptic")
@@ -79,13 +78,13 @@ fun SettingsScreen(navController: NavController) {
             }
 
             Text("Primary Color (Hex: AARRGGBB)", modifier = Modifier.padding(top = 16.dp))
-            TextField(value = primary.toString(16), onValueChange = { newVal -> 
-                scope.launch { try { context.dataStore.edit { it[PRIMARY_COLOR_KEY] = newVal.toLong(16) } } catch(e:Exception){} } 
+            TextField(value = primary.toString(16), onValueChange = { newVal ->
+                scope.launch { try { context.dataStore.edit { it[PRIMARY_COLOR_KEY] = newVal.toLong(16) } } catch(e:Exception){} }
             })
 
             Text("Secondary Color (Hex: AARRGGBB)", modifier = Modifier.padding(top = 8.dp))
-            TextField(value = secondary.toString(16), onValueChange = { newVal -> 
-                scope.launch { try { context.dataStore.edit { it[SECONDARY_COLOR_KEY] = newVal.toLong(16) } } catch(e:Exception){} } 
+            TextField(value = secondary.toString(16), onValueChange = { newVal ->
+                scope.launch { try { context.dataStore.edit { it[SECONDARY_COLOR_KEY] = newVal.toLong(16) } } catch(e:Exception){} }
             })
 
             Text("Glassmorphism", modifier = Modifier.padding(top = 16.dp))
