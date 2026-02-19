@@ -72,5 +72,5 @@ fun AppTheme(
 
 private val Context.dataStore: DataStore<Preferences> by lazy {
     // Accessing the static provider for simplicity in this setup
-    AppModule.provideDataStore(this)
+    AppModule.provideDataStore(this@dataStore)
 }

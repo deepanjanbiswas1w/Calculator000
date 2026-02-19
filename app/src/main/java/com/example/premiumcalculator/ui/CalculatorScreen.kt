@@ -42,6 +42,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.premiumcalculator.viewmodel.CalculatorViewModel
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -170,5 +172,5 @@ fun AnimatedButton(text: String, onClick: () -> Unit) {
 
 private val Context.dataStore by lazy {
     // Re-using the same access pattern from Theme.kt
-    AppModule.provideDataStore(this)
+    AppModule.provideDataStore(this@dataStore)
 }
