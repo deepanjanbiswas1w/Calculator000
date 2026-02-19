@@ -19,6 +19,10 @@ class HistoryViewModel @Inject constructor(
     val history: State<List<HistoryEntity>> = _history
 
     init {
+        loadHistory()
+    }
+
+    private fun loadHistory() {
         viewModelScope.launch {
             _history.value = repository.getAll()
         }
@@ -28,6 +32,14 @@ class HistoryViewModel @Inject constructor(
         viewModelScope.launch {
             repository.clearAll()
             _history.value = emptyList()
+        }
+    }
+
+    fun updateNote(item: HistoryEntity, note: String) {
+        viewModelScope.launch {
+            val updatedItem = item.copy(note = note)
+            repository.update(updatedItem)
+            loadHistory()
         }
     }
 }

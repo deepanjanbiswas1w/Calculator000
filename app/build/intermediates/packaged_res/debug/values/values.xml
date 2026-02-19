@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="glass_background">#80FFFFFF</color>
+    <color name="glass_background_dark">#80212121</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <string name="amoled_black">AMOLED Black</string>
+    <string name="app_name">Premium Calculator</string>
+    <string name="back">Back</string>
+    <string name="calculator">Calculator</string>
+    <string name="clear_all">Clear All</string>
+    <string name="dark">Dark</string>
+    <string name="decimal_places">Decimal Places</string>
+    <string name="haptic_feedback">Haptic Feedback</string>
+    <string name="history">History</string>
+    <string name="light">Light</string>
+    <string name="open_history">Open history</string>
+    <string name="open_settings">Open settings</string>
+    <string name="settings">Settings</string>
+    <string name="theme">Theme</string>
+    <style name="Theme.PremiumCalculator" parent="android:Theme.Material.Light.NoActionBar"/>
+</resources>

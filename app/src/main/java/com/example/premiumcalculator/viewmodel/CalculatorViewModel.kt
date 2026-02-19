@@ -18,6 +18,12 @@ import javax.inject.Inject
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import java.util.ArrayDeque
+import kotlin.math.cos
+import kotlin.math.ln
+import kotlin.math.log10
+import kotlin.math.sin
+import kotlin.math.sqrt
+import kotlin.math.tan
 
 private val PRECISION_KEY = intPreferencesKey("precision")
 
@@ -33,7 +39,7 @@ class CalculatorViewModel @Inject constructor(
     private val _preview = mutableStateOf("")
     val preview: State<String> = _preview
 
-    private val _precisionFlow = dataStore.data
+    private val precision: State<Int> = dataStore.data
         .map { it[PRECISION_KEY] ?: 6 }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 6)
 
@@ -45,11 +51,11 @@ class CalculatorViewModel @Inject constructor(
                     val formatted = formatResult(result)
                     _preview.value = formatted
                     viewModelScope.launch {
-                        repository.insert(_expression.value, formatted)
+                        repository.insert(_expression.value, formatted, "") 
                     }
                     _expression.value = formatted
                 } catch (e: Exception) {
-                    _preview.value = if (e.message == "Division by zero") "Cannot divide by zero" else "Error"
+                    _preview.value = e.message ?: "Error"
                 }
             }
             "C" -> {
@@ -63,7 +69,10 @@ class CalculatorViewModel @Inject constructor(
                 }
             }
             else -> {
-                _expression.value += text
+                _expression.value += when (text) {
+                    "sin", "cos", "tan", "log", "ln", "√" -> "$text("
+                    else -> text
+                }
                 updatePreview()
             }
         }
@@ -78,15 +87,61 @@ class CalculatorViewModel @Inject constructor(
     }
 
     private fun formatResult(result: BigDecimal): String {
-        return result.setScale(_precisionFlow.value, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
+        return try {
+            result.setScale(precision.value, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
+        } catch (e: Exception) {
+            result.toPlainString()
+        }
     }
 
     private fun evaluateExpression(expr: String): BigDecimal {
         if (expr.isEmpty()) return BigDecimal.ZERO
         val expression = expr.replace(" ", "")
+        val tokens = tokenize(expression)
+
+        val output = ArrayDeque<BigDecimal>()
+        val operators = ArrayDeque<String>()
+        val precedence = mapOf("+" to 1, "-" to 1, "*" to 2, "/" to 2, "^" to 3)
+
+        for (token in tokens) {
+            when {
+                token.toBigDecimalOrNull() != null -> output.addLast(token.toBigDecimal())
+                token in listOf("π", "e") -> output.addLast(if (token == "π") BigDecimal(Math.PI) else BigDecimal(Math.E))
+                token == "(" -> operators.addLast(token)
+                token == ")" -> {
+                    while (operators.isNotEmpty() && operators.last() != "(") {
+                        applyOperator(output, operators.removeLast())
+                    }
+                    if (operators.isNotEmpty()) operators.removeLast()
+                    if (operators.isNotEmpty() && operators.last() in listOf("sin", "cos", "tan", "log", "ln", "√")) {
+                        applyUnary(output, operators.removeLast())
+                    }
+                }
+                token in listOf("sin", "cos", "tan", "log", "ln", "√", "!") -> {
+                    if (token == "!") applyUnary(output, token) else operators.addLast(token)
+                }
+                precedence.containsKey(token) -> {
+                    while (operators.isNotEmpty() && operators.last() != "(" && (precedence[operators.last()] ?: 0) >= precedence[token]!!) {
+                        applyOperator(output, operators.removeLast())
+                    }
+                    operators.addLast(token)
+                }
+            }
+        }
+
+        while (operators.isNotEmpty()) {
+            applyOperator(output, operators.removeLast())
+        }
+
+        return output.firstOrNull() ?: BigDecimal.ZERO
+    }
+
+    private fun tokenize(expr: String): List<String> {
         val tokens = mutableListOf<String>()
         var current = ""
-        for (char in expression) {
+        var i = 0
+        while (i < expr.length) {
+            val char = expr[i]
             if (char.isDigit() || char == '.') {
                 current += char
             } else {
@@ -94,67 +149,65 @@ class CalculatorViewModel @Inject constructor(
                     tokens.add(current)
                     current = ""
                 }
-                tokens.add(char.toString())
+                if (char in "+-*/^()%!πe√") {
+                    tokens.add(char.toString())
+                } else if (i + 2 < expr.length) {
+                    val tri = expr.substring(i, i + 3)
+                    if (tri in listOf("sin", "cos", "tan", "log")) {
+                        tokens.add(tri)
+                        i += 2
+                    } else if (expr.substring(i, i + 2) == "ln") {
+                        tokens.add("ln")
+                        i += 1
+                    }
+                } else if (i + 1 < expr.length && expr.substring(i, i + 2) == "ln") {
+                    tokens.add("ln")
+                    i += 1
+                }
             }
+            i++
         }
         if (current.isNotEmpty()) tokens.add(current)
-
-        val newTokens = mutableListOf<String>()
-        for (i in tokens.indices) {
-            val token = tokens[i]
-            if (token == "-" && (i == 0 || "+-*/(".contains(tokens[i - 1]))) {
-                newTokens.add("-1")
-                newTokens.add("*")
-            } else {
-                newTokens.add(token)
-            }
-        }
-
-        val output = ArrayDeque<BigDecimal>()
-        val operators = ArrayDeque<String>()
-        val precedence = mapOf("+" to 1, "-" to 1, "*" to 2, "/" to 2)
-
-        for (token in newTokens) {
-            when {
-                token.toBigDecimalOrNull() != null -> output.addLast(token.toBigDecimal())
-                token == "(" -> operators.addLast(token)
-                token == ")" -> {
-                    while (operators.isNotEmpty() && operators.last() != "(") {
-                        applyOperator(output, operators.removeLast())
-                    }
-                    if (operators.isNotEmpty() && operators.last() == "(") operators.removeLast()
-                    else throw IllegalArgumentException("Mismatched parentheses")
-                }
-                precedence.containsKey(token) -> {
-                    while (operators.isNotEmpty() && operators.last() != "(" && precedence[operators.last()]!! >= precedence[token]!!) {
-                        applyOperator(output, operators.removeLast())
-                    }
-                    operators.addLast(token)
-                }
-                else -> throw IllegalArgumentException("Invalid token: $token")
-            }
-        }
-
-        while (operators.isNotEmpty()) {
-            if (operators.last() == "(") throw IllegalArgumentException("Mismatched parentheses")
-            applyOperator(output, operators.removeLast())
-        }
-
-        if (output.size != 1) throw IllegalArgumentException("Invalid expression")
-        return output.first()
+        return tokens
     }
 
     private fun applyOperator(output: ArrayDeque<BigDecimal>, op: String) {
-        if (output.size < 2) throw IllegalArgumentException("Invalid expression")
+        if (output.size < 2) return
         val b = output.removeLast()
         val a = output.removeLast()
         val res = when (op) {
             "+" -> a + b
             "-" -> a - b
             "*" -> a * b
-            "/" -> if (b.compareTo(BigDecimal.ZERO) == 0) throw ArithmeticException("Division by zero") else a.divide(b, MathContext.DECIMAL128)
-            else -> throw IllegalArgumentException("Invalid operator")
+            "/" -> if (b.compareTo(BigDecimal.ZERO) == 0) BigDecimal.ZERO else a.divide(b, MathContext.DECIMAL128)
+            "^" -> BigDecimal(Math.pow(a.toDouble(), b.toDouble()))
+            else -> a
         }
         output.addLast(res)
+    }
+
+    private fun applyUnary(output: ArrayDeque<BigDecimal>, op: String) {
+        if (output.isEmpty()) return
+        val a = output.removeLast()
+        val d = a.toDouble()
+        val res = when (op) {
+            "sin" -> BigDecimal(sin(d))
+            "cos" -> BigDecimal(cos(d))
+            "tan" -> BigDecimal(tan(d))
+            "log" -> BigDecimal(log10(d))
+            "ln" -> BigDecimal(ln(d))
+            "√" -> BigDecimal(sqrt(d))
+            "!" -> factorial(a)
+            else -> a
+        }
+        output.addLast(res)
+    }
+
+    private fun factorial(n: BigDecimal): BigDecimal {
+        val num = n.toInt()
+        if (num < 0) return BigDecimal.ZERO
+        var res = BigDecimal.ONE
+        for (j in 2..num) res = res.multiply(BigDecimal(j))
+        return res
     }
 }

@@ -1,8 +1,6 @@
 package com.example.premiumcalculator
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.room.Room
 import com.example.premiumcalculator.data.AppDatabase
 import com.example.premiumcalculator.data.HistoryDao
@@ -17,12 +15,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
-
-    @Singleton
-    @Provides
-    fun provideDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
-        return context.dataStore
-    }
 
     @Singleton
     @Provides

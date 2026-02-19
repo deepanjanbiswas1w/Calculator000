@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "com.example.premiumcalculator.app-merged_res-62:/mipmap-xxxhdpi_ic_launcher_round.png.flat",
+        "source": "com.example.premiumcalculator.app-main-64:/mipmap-xxxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.example.premiumcalculator.app-merged_res-62:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "com.example.premiumcalculator.app-main-64:/mipmap-xxxhdpi/ic_launcher.png"
+    }
+]

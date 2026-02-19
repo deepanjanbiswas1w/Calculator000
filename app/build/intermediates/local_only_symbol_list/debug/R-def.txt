@@ -1,0 +1,25 @@
+R_DEF: Internal format may change without notice
+local
+color glass_background
+color glass_background_dark
+color purple_500
+color purple_700
+color teal_200
+color teal_700
+mipmap ic_launcher
+mipmap ic_launcher_round
+string amoled_black
+string app_name
+string back
+string calculator
+string clear_all
+string dark
+string decimal_places
+string haptic_feedback
+string history
+string light
+string open_history
+string open_settings
+string settings
+string theme
+style Theme.PremiumCalculator
