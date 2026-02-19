@@ -7,7 +7,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.HiltAndroidApp
 
-// পুরো অ্যাপে ডাটা-স্টোর শুধু এখানেই থাকবে
+// গ্লোবাল ডাটা-স্টোর যা সবাই পাবে
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 @HiltAndroidApp

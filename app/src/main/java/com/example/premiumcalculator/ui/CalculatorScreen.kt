@@ -24,23 +24,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.premiumcalculator.viewmodel.CalculatorViewModel
+import com.example.premiumcalculator.dataStore // গ্লোবাল ইম্পোর্ট
 import kotlinx.coroutines.flow.map
 
 private val HAPTIC_KEY = booleanPreferencesKey("haptic")
-
-data class CalcButton(val text: String)
-
-private val buttons = listOf(
-    CalcButton("7"), CalcButton("8"), CalcButton("9"), CalcButton("/"),
-    CalcButton("4"), CalcButton("5"), CalcButton("6"), CalcButton("*"),
-    CalcButton("1"), CalcButton("2"), CalcButton("3"), CalcButton("-"),
-    CalcButton("0"), CalcButton("."), CalcButton("="), CalcButton("+"),
-    CalcButton("("), CalcButton(")"), CalcButton("C"), CalcButton("DEL")
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,47 +56,20 @@ fun CalculatorScreen(navController: NavController) {
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            verticalArrangement = Arrangement.Bottom
-        ) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.End
-            ) {
-                Text(
-                    text = expression,
-                    style = MaterialTheme.typography.headlineMedium,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text(
-                    text = preview,
-                    style = MaterialTheme.typography.displayLarge,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.fillMaxWidth()
-                )
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValues), verticalArrangement = Arrangement.Bottom) {
+            Column(modifier = Modifier.weight(1f).fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.End) {
+                Text(text = expression, style = MaterialTheme.typography.headlineMedium)
+                Text(text = preview, style = MaterialTheme.typography.displayLarge)
             }
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
-                modifier = Modifier.padding(8.dp)
-            ) {
-                items(buttons) { button ->
-                    AnimatedButton(
-                        text = button.text,
-                        onClick = {
-                            if (haptic) {
-                                val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                                vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
-                            }
-                            viewModel.onButtonClick(button.text)
+            LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.padding(8.dp)) {
+                items(listOf("7","8","9","/","4","5","6","*","1","2","3","-","0",".","=","+","(",")","C","DEL")) { text ->
+                    AnimatedButton(text = text, onClick = {
+                        if (haptic) {
+                            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
                         }
-                    )
+                        viewModel.onButtonClick(text)
+                    })
                 }
             }
         }
@@ -117,32 +80,17 @@ fun CalculatorScreen(navController: NavController) {
 fun AnimatedButton(text: String, onClick: () -> Unit) {
     val pressed = remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (pressed.value) 0.9f else 1f)
-
     Card(
-        modifier = Modifier
-            .padding(4.dp)
-            .scale(scale)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = {
-                        pressed.value = true
-                        try {
-                            awaitRelease()
-                        } finally {
-                            pressed.value = false
-                        }
-                        onClick()
-                    }
-                )
-            },
-        elevation = CardDefaults.cardElevation(4.dp),
-        shape = CircleShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        modifier = Modifier.padding(4.dp).scale(scale).pointerInput(Unit) {
+            detectTapGestures(onPress = {
+                pressed.value = true
+                try { awaitRelease() } finally { pressed.value = false }
+                onClick()
+            })
+        },
+        shape = CircleShape
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.padding(24.dp)
-        ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(24.dp)) {
             Text(text, style = MaterialTheme.typography.titleLarge)
         }
     }
