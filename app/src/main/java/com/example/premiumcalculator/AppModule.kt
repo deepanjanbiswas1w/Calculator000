@@ -1,6 +1,8 @@
 package com.example.premiumcalculator
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.room.Room
 import com.example.premiumcalculator.data.AppDatabase
 import com.example.premiumcalculator.data.HistoryDao
@@ -29,4 +31,11 @@ object AppModule {
     @Singleton
     @Provides
     fun provideHistoryRepository(dao: HistoryDao): HistoryRepository = HistoryRepository(dao)
+
+    // Hilt-কে DataStore সাপ্লাই দেওয়ার জন্য এই নতুন মেথডটা যোগ করা হলো
+    @Singleton
+    @Provides
+    fun provideDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
+        return context.dataStore
+    }
 }
