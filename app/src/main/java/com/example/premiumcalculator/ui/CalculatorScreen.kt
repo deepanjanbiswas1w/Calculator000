@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.VibrationEffect
 import android.os.Vibrator
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -32,6 +31,16 @@ import androidx.navigation.NavController
 import com.example.premiumcalculator.viewmodel.CalculatorViewModel
 import kotlinx.coroutines.launch
 
+data class ButtonData(val text: String)
+
+private val basicButtons = listOf(
+    ButtonData("C"), ButtonData("DEL"), ButtonData("%"), ButtonData("÷"),
+    ButtonData("7"), ButtonData("8"), ButtonData("9"), ButtonData("×"),
+    ButtonData("4"), ButtonData("5"), ButtonData("6"), ButtonData("−"),
+    ButtonData("1"), ButtonData("2"), ButtonData("3"), ButtonData("+"),
+    ButtonData("."), ButtonData("0"), ButtonData("="), ButtonData("")
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalculatorScreen(navController: NavController) {
@@ -40,41 +49,40 @@ fun CalculatorScreen(navController: NavController) {
     val hapticEnabled by remember { mutableStateOf(true) }
     val expression by viewModel.expression
     val preview by viewModel.preview
-    var showMenu by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
+
+    var showFeatureSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val coroutineScope = rememberCoroutineScope()
 
-    // Features Modal (Hidden by default)
-    if (showMenu) {
+    if (showFeatureSheet) {
         ModalBottomSheet(
-            onDismissRequest = { showMenu = false },
+            onDismissRequest = { showFeatureSheet = false },
             sheetState = sheetState,
-            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            dragHandle = { BottomSheetDefaults.DragHandle() },
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    "Pro Tools & Features",
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(bottom = 16.dp, start = 8.dp),
-                    fontWeight = FontWeight.Bold
-                )
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxHeight(0.6f)
-                ) {
-                    items(proTools) { tool ->
-                        ProToolCard(tool, navController) {
-                            coroutineScope.launch {
-                                sheetState.hide()
-                                showMenu = false
-                            }
+            Text(
+                text = "Pro Tools",
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(16.dp),
+                fontWeight = FontWeight.Bold
+            )
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
+            ) {
+                items(proTools) { tool ->
+                    ProToolCard(tool, navController) {
+                        coroutineScope.launch {
+                            sheetState.hide()
+                            showFeatureSheet = false
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
@@ -84,61 +92,57 @@ fun CalculatorScreen(navController: NavController) {
             CenterAlignedTopAppBar(
                 title = { Text("Pro Calculator", fontWeight = FontWeight.ExtraBold) },
                 actions = {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.Widgets, contentDescription = "Features", tint = MaterialTheme.colorScheme.primary)
+                    IconButton(onClick = { showFeatureSheet = true }) {
+                        Icon(Icons.Default.Widgets, "Features", tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             )
         }
-    ) { padding ->
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 24.dp)
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp)
         ) {
-            // Display Area (Now takes more space)
             Column(
-                modifier = Modifier
-                    .weight(1.2f)
-                    .fillMaxWidth(),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.Bottom
             ) {
                 Text(
-                    text = expression,
-                    fontSize = 36.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    text = expression.ifEmpty { "0" },
+                    fontSize = 40.sp,
+                    fontWeight = FontWeight.Light,
                     textAlign = TextAlign.End,
-                    lineHeight = 40.sp
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = preview.ifEmpty { "0" },
-                    fontSize = 64.sp,
+                    fontSize = 56.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.End
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.fillMaxWidth()
                 )
+                Spacer(modifier = Modifier.height(24.dp))
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Keypad Area
-            Box(modifier = Modifier.weight(2f)) {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    userScrollEnabled = false
-                ) {
-                    items(basicButtons) { button ->
-                        QuickCalcButton(
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                contentPadding = PaddingValues(bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth().weight(1.5f)
+            ) {
+                items(basicButtons) { button ->
+                    if (button.text.isNotEmpty()) {
+                        CalcButtonUI(
                             text = button.text,
                             onClick = {
                                 if (hapticEnabled) {
-                                    val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                                    vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
+                                    val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                                    vibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
                                 }
                                 viewModel.onButtonClick(button.text)
                             }
@@ -151,84 +155,60 @@ fun CalculatorScreen(navController: NavController) {
 }
 
 private val proTools = listOf(
-    ProTool(Icons.Default.HealthAndSafety, "BMI", "Health tracking", "bmi"),
-    ProTool(Icons.Default.AttachMoney, "Finance", "Investment/EMI", "investment"),
-    ProTool(Icons.Default.LocalGasStation, "Fuel", "Cost calculator", "fuel"),
-    ProTool(Icons.Default.CompareArrows, "Pricing", "Unit comparator", "unit_price"),
-    ProTool(Icons.Default.School, "GPA", "Grade tracker", "gpa"),
-    ProTool(Icons.Default.CurrencyExchange, "Currency", "Exchange rates", "currency"),
-    ProTool(Icons.Default.Settings, "Control Center", "App settings", "settings")
+    ProTool(Icons.Default.HealthAndSafety, "BMI/Health", "Track health", "bmi"),
+    ProTool(Icons.Default.AttachMoney, "Investment", "Compound interest", "investment"),
+    ProTool(Icons.Default.LocalGasStation, "Fuel Cost", "Trip optimizer", "fuel"),
+    ProTool(Icons.Default.CompareArrows, "Unit Price", "Deal finder", "unit_price"),
+    ProTool(Icons.Default.School, "GPA/CGPA", "Grade calc", "gpa"),
+    ProTool(Icons.Default.CurrencyExchange, "Currency", "Live rates", "currency")
 )
 
 data class ProTool(val icon: ImageVector, val title: String, val subtitle: String, val route: String)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProToolCard(tool: ProTool, navController: NavController, onDismiss: () -> Unit) {
+    var pressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (pressed) 0.94f else 1f)
+
     Card(
         onClick = {
             navController.navigate(tool.route)
             onDismiss()
         },
-        modifier = Modifier.aspectRatio(1.1f),
+        modifier = Modifier.aspectRatio(1f).scale(scale).shadow(4.dp, RoundedCornerShape(28.dp)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        shape = RoundedCornerShape(24.dp)
+        shape = RoundedCornerShape(28.dp)
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(tool.icon, contentDescription = tool.title, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
-            Spacer(modifier = Modifier.height(8.dp))
+            Icon(tool.icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
+            Spacer(Modifier.height(8.dp))
             Text(tool.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Text(tool.subtitle, fontSize = 10.sp, textAlign = TextAlign.Center)
+            Text(tool.subtitle, fontSize = 10.sp, textAlign = TextAlign.Center, lineHeight = 12.sp)
         }
     }
 }
 
-private val basicButtons = listOf(
-    CalcButton("C"), CalcButton("DEL"), CalcButton("%"), CalcButton("÷"),
-    CalcButton("7"), CalcButton("8"), CalcButton("9"), CalcButton("×"),
-    CalcButton("4"), CalcButton("5"), CalcButton("6"), CalcButton("−"),
-    CalcButton("1"), CalcButton("2"), CalcButton("3"), CalcButton("+"),
-    CalcButton("."), CalcButton("0"), CalcButton("history"), CalcButton("=")
-)
-
-data class CalcButton(val text: String)
-
 @Composable
-private fun QuickCalcButton(text: String, onClick: () -> Unit) {
+private fun CalcButtonUI(text: String, onClick: () -> Unit) {
     var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (pressed) 0.9f else 1f)
+    val scale by animateFloatAsState(if (pressed) 0.92f else 1f)
+    val isOperator = text in listOf("÷", "×", "−", "+", "=")
 
-    Surface(
+    Button(
         onClick = onClick,
         modifier = Modifier.aspectRatio(1f).scale(scale).pointerInput(Unit) {
             detectTapGestures(onPress = { pressed = true; tryAwaitRelease(); pressed = false })
         },
         shape = CircleShape,
-        color = when {
-            text == "=" -> MaterialTheme.colorScheme.primary
-            text in listOf("÷", "×", "−", "+") -> MaterialTheme.colorScheme.secondaryContainer
-            text in listOf("C", "DEL") -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f)
-            else -> MaterialTheme.colorScheme.surfaceVariant
-        }
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isOperator) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = if (isOperator) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+        )
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            if (text == "history") {
-                Icon(Icons.Default.History, contentDescription = "History")
-            } else {
-                Text(
-                    text = text,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = when (text) {
-                        "=" -> MaterialTheme.colorScheme.onPrimary
-                        else -> MaterialTheme.colorScheme.onSurface
-                    }
-                )
-            }
-        }
+        Text(text = text, fontSize = 26.sp, fontWeight = FontWeight.Medium)
     }
 }
