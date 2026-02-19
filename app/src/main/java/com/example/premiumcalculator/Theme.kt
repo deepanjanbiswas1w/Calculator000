@@ -1,17 +1,12 @@
 package com.example.premiumcalculator
 
-import android.content.Context
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.map
 
@@ -55,8 +50,9 @@ fun AppTheme(
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
-    // Note: Use a more standard DataStore access pattern
+    // ম্যানুয়াল AppModule কল বাদ দিয়ে সরাসরি context থেকে dataStore অ্যাক্সেস
     val theme = context.dataStore.data.map { it[THEME_KEY] ?: "light" }.collectAsState(initial = "light").value
+    
     val colorScheme = when (theme) {
         "dark" -> DarkColorScheme
         "black" -> AmoledColorScheme
@@ -70,4 +66,6 @@ fun AppTheme(
     )
 }
 
-private val Context.dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences> get() = AppModule.provideDataStore(this)
+// এটি অ্যান্ড্রয়েডের অফিশিয়াল সেফ প্যাটার্ন
+import androidx.datastore.preferences.preferencesDataStore
+private val android.content.Context.dataStore by preferencesDataStore(name = "settings")

@@ -170,4 +170,5 @@ fun AnimatedButton(text: String, onClick: () -> Unit) {
     }
 }
 
-private val Context.dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences> get() = AppModule.provideDataStore(this)
+import androidx.datastore.preferences.preferencesDataStore
+private val android.content.Context.dataStore by preferencesDataStore(name = "settings")
