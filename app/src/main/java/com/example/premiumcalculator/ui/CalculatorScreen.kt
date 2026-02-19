@@ -17,8 +17,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -31,6 +31,7 @@ import androidx.navigation.NavController
 import com.example.premiumcalculator.viewmodel.CalculatorViewModel
 import kotlinx.coroutines.launch
 
+// Data class renamed to avoid naming conflict with the composable function
 data class ButtonData(val text: String)
 
 private val basicButtons = listOf(
@@ -55,11 +56,15 @@ fun CalculatorScreen(navController: NavController) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val coroutineScope = rememberCoroutineScope()
 
+    // Cache the proTools list for stability
+    val cachedProTools = remember { fullProToolsList }
+
     if (showFeatureSheet) {
         ModalBottomSheet(
             onDismissRequest = { showFeatureSheet = false },
             sheetState = sheetState,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            dragHandle = { BottomSheetDefaults.DragHandle() },
             containerColor = MaterialTheme.colorScheme.surface
         ) {
             Column(modifier = Modifier.padding(bottom = 32.dp)) {
@@ -76,7 +81,10 @@ fun CalculatorScreen(navController: NavController) {
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxWidth().heightIn(max = 500.dp)
                 ) {
-                    items(fullProToolsList) { tool ->
+                    items(
+                        items = cachedProTools,
+                        key = { it.title }
+                    ) { tool ->
                         ProToolCard(tool, navController) {
                             coroutineScope.launch {
                                 sheetState.hide()
@@ -174,14 +182,20 @@ data class ProToolData(val icon: ImageVector, val title: String, val subtitle: S
 @Composable
 private fun ProToolCard(tool: ProToolData, navController: NavController, onDismiss: () -> Unit) {
     var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (pressed) 0.94f else 1f)
+    val scale by animateFloatAsState(if (pressed) 0.94f else 1f, label = "scale")
 
     Card(
         onClick = {
             navController.navigate(tool.route)
             onDismiss()
         },
-        modifier = Modifier.aspectRatio(1f).scale(scale).shadow(4.dp, RoundedCornerShape(28.dp)),
+        modifier = Modifier
+            .aspectRatio(1f)
+            .graphicsLayer(scaleX = scale, scaleY = scale)
+            .pointerInput(Unit) {
+                detectTapGestures(onPress = { pressed = true; tryAwaitRelease(); pressed = false })
+            }
+            .shadow(4.dp, RoundedCornerShape(28.dp)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         shape = RoundedCornerShape(28.dp)
     ) {
@@ -201,18 +215,24 @@ private fun ProToolCard(tool: ProToolData, navController: NavController, onDismi
 @Composable
 private fun CalcButtonUI(text: String, onClick: () -> Unit) {
     var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (pressed) 0.92f else 1f)
+    val scale by animateFloatAsState(if (pressed) 0.92f else 1f, label = "scale")
     val isOperator = text in listOf("÷", "×", "−", "+", "=")
 
     Button(
         onClick = onClick,
-        modifier = Modifier.aspectRatio(1f).scale(scale).pointerInput(Unit) {
-            detectTapGestures(onPress = { pressed = true; tryAwaitRelease(); pressed = false })
-        },
+        modifier = Modifier
+            .aspectRatio(1f)
+            .graphicsLayer(scaleX = scale, scaleY = scale)
+            .pointerInput(Unit) {
+                detectTapGestures(onPress = { pressed = true; tryAwaitRelease(); pressed = false })
+            },
         shape = CircleShape,
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (isOperator) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = if (isOperator) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+            containerColor = if (text == "=") MaterialTheme.colorScheme.primary 
+                            else if (isOperator) MaterialTheme.colorScheme.secondaryContainer
+                            else MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = if (text == "=") MaterialTheme.colorScheme.onPrimary 
+                           else MaterialTheme.colorScheme.onSurface
         )
     ) {
         Text(text = text, fontSize = 26.sp, fontWeight = FontWeight.Medium)
