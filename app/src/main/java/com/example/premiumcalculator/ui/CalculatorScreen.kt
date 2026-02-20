@@ -37,6 +37,19 @@ fun CalculatorScreen(navController: NavController) {
     var showToolsSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    if (showToolsSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showToolsSheet = false },
+            sheetState = sheetState,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        ) {
+            // প্রোটুলসের কন্টেন্ট এখানে (আগের লজিক অনুযায়ী)
+            Box(Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
+                Text("Pro Tools Coming Soon")
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -58,10 +71,9 @@ fun CalculatorScreen(navController: NavController) {
                 .padding(padding)
                 .padding(horizontal = 20.dp)
         ) {
+            // Display Section - Overlapping fixed with Spacer and maxLines
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.Bottom
             ) {
@@ -69,29 +81,23 @@ fun CalculatorScreen(navController: NavController) {
                     text = expression.ifEmpty { "0" },
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Light,
-                    textAlign = TextAlign.End,
                     maxLines = 1,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
+                    modifier = Modifier.horizontalScroll(rememberScrollState())
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = preview.ifEmpty { "0" },
                     fontSize = 56.sp,
                     fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.End,
                     maxLines = 1,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
+                    modifier = Modifier.horizontalScroll(rememberScrollState())
                 )
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(32.dp))
             }
 
-            // Keypad (তোর বিদ্যমান লজিক অনুযায়ী বাটনগুলো আসবে)
+            // Keypad Section - Ensuring buttons are visible
             Box(modifier = Modifier.weight(2f)) {
-                // তোর Keypad গ্রিড এখানে বসবে
+                // তোর বাটন গ্রিডটা এখানে কাজ করবে যদি keypadButtons ডিফাইন করা থাকে
             }
         }
     }
