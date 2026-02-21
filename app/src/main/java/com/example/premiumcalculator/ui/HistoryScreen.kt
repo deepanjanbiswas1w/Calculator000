@@ -30,8 +30,9 @@ fun HistoryScreen(navController: NavController) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.clearAll() }) {
-                        Icon(Icons.Default.Delete, "Clear All")
+                    // ไอকন বাদ দিয়ে TextButton ব্যবহার করা হলো যাতে লেখা না কাটে
+                    TextButton(onClick = { viewModel.clearAll() }) {
+                        Text("Clear", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelLarge)
                     }
                 }
             )
