@@ -1,18 +1,19 @@
 package com.example.premiumcalculator.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -24,10 +25,11 @@ fun BmiHealthScreen(navController: NavController) {
     var weight by remember { mutableStateOf("") }
     var height by remember { mutableStateOf("") }
     var age by remember { mutableStateOf("") }
-    var bmi by remember { mutableStateOf(0.0) }
-    var bmr by remember { mutableStateOf(0.0) }
     var isMale by remember { mutableStateOf(true) }
-    var result by remember { mutableStateOf("") }
+    var resultBmi by remember { mutableStateOf("") }
+    var resultBmr by remember { mutableStateOf("") }
+    var showError by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     Scaffold(
         topBar = {
@@ -35,82 +37,71 @@ fun BmiHealthScreen(navController: NavController) {
                 title = { Text("BMI/Health Tracker") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 }
             )
         }
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
-                .blur(10.dp)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier.padding(padding).padding(horizontal = 20.dp).verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(Modifier.height(16.dp))
             OutlinedTextField(
-                value = weight,
-                onValueChange = { weight = it },
-                label = { Text("Weight (kg)") },
-                modifier = Modifier.fillMaxWidth()
+                value = weight, onValueChange = { weight = it; showError = false },
+                label = { Text("Weight (kg)") }, isError = showError && weight.isEmpty(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
             OutlinedTextField(
-                value = height,
-                onValueChange = { height = it },
-                label = { Text("Height (cm)") },
-                modifier = Modifier.fillMaxWidth()
+                value = height, onValueChange = { height = it; showError = false },
+                label = { Text("Height (cm)") }, isError = showError && height.isEmpty(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
             OutlinedTextField(
-                value = age,
-                onValueChange = { age = it },
-                label = { Text("Age") },
-                modifier = Modifier.fillMaxWidth()
+                value = age, onValueChange = { age = it; showError = false },
+                label = { Text("Age") }, isError = showError && age.isEmpty(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                RadioButton(selected = isMale, onClick = { isMale = true })
-                Text("Male", modifier = Modifier.align(Alignment.CenterVertically))
-                Spacer(modifier = Modifier.width(16.dp))
-                RadioButton(selected = !isMale, onClick = { isMale = false })
-                Text("Female", modifier = Modifier.align(Alignment.CenterVertically))
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                FilterChip(selected = isMale, onClick = { isMale = true }, label = { Text("Male") })
+                Spacer(Modifier.width(12.dp))
+                FilterChip(selected = !isMale, onClick = { isMale = false }, label = { Text("Female") })
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(28.dp))
             Button(
                 onClick = {
-                    val w = weight.toDoubleOrNull() ?: 0.0
-                    val h = height.toDoubleOrNull() ?: 0.0
-                    val a = age.toIntOrNull() ?: 0
-                    if (w > 0 && h > 0 && a > 0) {
-                        bmi = w / ((h / 100).pow(2))
-                        bmr = if (isMale) 88.362 + (13.397 * w) + (4.799 * h) - (5.677 * a)
+                    val w = weight.toDoubleOrNull(); val h = height.toDoubleOrNull(); val a = age.toIntOrNull()
+                    if (w != null && h != null && a != null) {
+                        val bmi = w / ((h / 100).pow(2))
+                        val bmr = if (isMale) 88.362 + (13.397 * w) + (4.799 * h) - (5.677 * a)
                         else 447.593 + (9.247 * w) + (3.098 * h) - (4.330 * a)
-                        result = "BMI: ${"%.2f".format(bmi)}\nBMR: ${"%.2f".format(bmr)} kcal/day"
-                    } else {
-                        result = "Invalid input"
-                    }
+                        resultBmi = String.format("%.2f", bmi)
+                        resultBmr = String.format("%.0f kcal", bmr)
+                        showError = false; keyboardController?.hide()
+                    } else { showError = true }
                 },
-                shape = RoundedCornerShape(28.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Calculate", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Text(
-                    text = result,
-                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                    fontSize = 20.sp,
-                    textAlign = TextAlign.Center
-                )
+                modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(16.dp)
+            ) { Text("Calculate Health Score", fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+
+            if (resultBmi.isNotEmpty()) {
+                Spacer(Modifier.height(32.dp))
+                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                    Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("BMI Score", style = MaterialTheme.typography.titleMedium)
+                        Text(text = resultBmi, fontSize = 48.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.height(12.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.primary.copy(0.1f))
+                        Spacer(Modifier.height(12.dp))
+                        Text("Daily BMR: $resultBmr", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                    }
+                }
             }
         }
     }

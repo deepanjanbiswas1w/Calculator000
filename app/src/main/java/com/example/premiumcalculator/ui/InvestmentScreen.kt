@@ -1,17 +1,19 @@
 package com.example.premiumcalculator.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -24,7 +26,10 @@ fun InvestmentScreen(navController: NavController) {
     var rate by remember { mutableStateOf("") }
     var time by remember { mutableStateOf("") }
     var frequency by remember { mutableStateOf("Annually") }
-    var result by remember { mutableStateOf("") }
+    var resultAmount by remember { mutableStateOf("") }
+    var resultInterest by remember { mutableStateOf("") }
+    var showError by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val frequencies = listOf("Annually", "Semi-Annually", "Quarterly", "Monthly")
 
@@ -34,110 +39,70 @@ fun InvestmentScreen(navController: NavController) {
                 title = { Text("Investment Calculator") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 }
             )
         }
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
-                .blur(10.dp)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier.padding(padding).padding(horizontal = 20.dp).verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(Modifier.height(16.dp))
             OutlinedTextField(
-                value = principal,
-                onValueChange = { principal = it },
-                label = { Text("Principal Amount") },
-                modifier = Modifier.fillMaxWidth()
+                value = principal, onValueChange = { principal = it; showError = false },
+                label = { Text("Principal Amount") }, isError = showError && principal.isEmpty(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
             OutlinedTextField(
-                value = rate,
-                onValueChange = { rate = it },
-                label = { Text("Annual Rate (%)") },
-                modifier = Modifier.fillMaxWidth()
+                value = rate, onValueChange = { rate = it; showError = false },
+                label = { Text("Annual Interest Rate (%)") }, isError = showError && rate.isEmpty(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
             OutlinedTextField(
-                value = time,
-                onValueChange = { time = it },
-                label = { Text("Time (years)") },
-                modifier = Modifier.fillMaxWidth()
+                value = time, onValueChange = { time = it; showError = false },
+                label = { Text("Time (years)") }, isError = showError && time.isEmpty(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            var expanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded }
-            ) {
-                OutlinedTextField(
-                    readOnly = true,
-                    value = frequency,
-                    onValueChange = { },
-                    label = { Text("Compounding Frequency") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor()
-                )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    frequencies.forEach { freq ->
-                        DropdownMenuItem(
-                            text = { Text(freq) },
-                            onClick = { 
-                                frequency = freq
-                                expanded = false 
-                            }
-                        )
-                    }
+            Spacer(Modifier.height(16.dp))
+            var exp by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(expanded = exp, onExpandedChange = { exp = !exp }) {
+                OutlinedTextField(value = frequency, onValueChange = {}, readOnly = true, label = { Text("Compounding Frequency") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(exp) }, modifier = Modifier.fillMaxWidth().menuAnchor(), shape = RoundedCornerShape(16.dp))
+                ExposedDropdownMenu(expanded = exp, onDismissRequest = { exp = false }) {
+                    frequencies.forEach { f -> DropdownMenuItem(text = { Text(f) }, onClick = { frequency = f; exp = false }) }
                 }
             }
-            
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(28.dp))
             Button(
                 onClick = {
-                    val p = principal.toDoubleOrNull() ?: 0.0
-                    val r = rate.toDoubleOrNull() ?: 0.0
-                    val t = time.toDoubleOrNull() ?: 0.0
-                    val n = when (frequency) {
-                        "Semi-Annually" -> 2.0
-                        "Quarterly" -> 4.0
-                        "Monthly" -> 12.0
-                        else -> 1.0
-                    }
-                    if (p > 0 && r > 0 && t > 0) {
+                    val p = principal.toDoubleOrNull(); val r = rate.toDoubleOrNull(); val t = time.toDoubleOrNull()
+                    if (p != null && r != null && t != null) {
+                        val n = when (frequency) { "Semi-Annually" -> 2.0; "Quarterly" -> 4.0; "Monthly" -> 12.0; else -> 1.0 }
                         val amount = p * (1 + r / (100 * n)).pow(n * t)
-                        val interest = amount - p
-                        result = "Maturity Amount: ${"%.2f".format(amount)}\nInterest Earned: ${"%.2f".format(interest)}"
-                    } else {
-                        result = "Invalid input"
-                    }
+                        resultAmount = String.format("₹ %,.2f", amount)
+                        resultInterest = String.format("₹ %,.2f", amount - p)
+                        showError = false; keyboardController?.hide()
+                    } else { showError = true }
                 },
-                shape = RoundedCornerShape(28.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Calculate", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Text(
-                    text = result,
-                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                    fontSize = 20.sp,
-                    textAlign = TextAlign.Center
-                )
+                modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(16.dp)
+            ) { Text("Calculate Returns", fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+
+            if (resultAmount.isNotEmpty()) {
+                Spacer(Modifier.height(32.dp))
+                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                    Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Maturity Value", style = MaterialTheme.typography.titleMedium)
+                        Text(text = resultAmount, fontSize = 38.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.height(8.dp))
+                        Text(text = "Interest Earned: $resultInterest", style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
             }
         }
     }
