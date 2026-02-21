@@ -1,19 +1,19 @@
 package com.example.premiumcalculator.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,10 +23,11 @@ import androidx.navigation.NavController
 @Composable
 fun GpaCalculatorScreen(navController: NavController) {
     var subjectsInput by remember { mutableStateOf("4") }
-    val subjectsCount = subjectsInput.toIntOrNull() ?: 0
+    val keyboardController = LocalSoftwareKeyboardController.current
     val grades = remember { mutableStateListOf<String>().apply { repeat(10) { add("") } } }
     val credits = remember { mutableStateListOf<String>().apply { repeat(10) { add("") } } }
     var result by remember { mutableStateOf("") }
+    var showError by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -34,7 +35,7 @@ fun GpaCalculatorScreen(navController: NavController) {
                 title = { Text("GPA/CGPA Calculator") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 }
             )
@@ -44,85 +45,94 @@ fun GpaCalculatorScreen(navController: NavController) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
-                .blur(10.dp)
-                .padding(16.dp)
+                .padding(horizontal = 20.dp)
                 .verticalScroll(rememberScrollState())
         ) {
+            Spacer(Modifier.height(16.dp))
             OutlinedTextField(
                 value = subjectsInput,
-                onValueChange = { subjectsInput = it },
+                onValueChange = { subjectsInput = it; showError = false },
                 label = { Text("Number of Subjects (Max 10)") },
+                isError = showError && subjectsInput.isEmpty(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                shape = RoundedCornerShape(16.dp)
             )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            repeat(subjectsCount.coerceAtMost(10)) { index ->
+
+            Spacer(Modifier.height(24.dp))
+
+            val count = subjectsInput.toIntOrNull()?.coerceAtMost(10) ?: 0
+            repeat(count) { index ->
                 Row(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
-                        value = if (index < grades.size) grades[index] else "",
-                        onValueChange = { if (index < grades.size) grades[index] = it },
+                        value = grades[index],
+                        onValueChange = { grades[index] = it; showError = false },
                         label = { Text("Grade ${index + 1}") },
+                        isError = showError && grades[index].isEmpty(),
                         modifier = Modifier.weight(1f),
-                        singleLine = true
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(Modifier.width(12.dp))
                     OutlinedTextField(
-                        value = if (index < credits.size) credits[index] else "",
-                        onValueChange = { if (index < credits.size) credits[index] = it },
+                        value = credits[index],
+                        onValueChange = { credits[index] = it; showError = false },
                         label = { Text("Credits ${index + 1}") },
+                        isError = showError && credits[index].isEmpty(),
                         modifier = Modifier.weight(1f),
-                        singleLine = true
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
             }
-            
+
+            Spacer(Modifier.height(16.dp))
+
             Button(
                 onClick = {
                     var totalPoints = 0.0
                     var totalCredits = 0.0
-                    var hasError = false
-                    
-                    for (i in 0 until subjectsCount.coerceAtMost(10)) {
+                    var isValid = true
+
+                    for (i in 0 until count) {
                         val g = grades[i].toDoubleOrNull()
                         val c = credits[i].toDoubleOrNull()
-                        if (g != null && c != null && c > 0) {
+                        if (g != null && c != null) {
                             totalPoints += g * c
                             totalCredits += c
                         } else {
-                            hasError = true
+                            isValid = false
                         }
                     }
-                    
-                    result = if (!hasError && totalCredits > 0) {
-                        "GPA: ${"%.2f".format(totalPoints / totalCredits)}"
+
+                    if (isValid && totalCredits > 0) {
+                        result = String.format("%.2f", totalPoints / totalCredits)
+                        showError = false
+                        keyboardController?.hide() // কিবোর্ড হাইড হবে
                     } else {
-                        "Please enter valid Grades and Credits"
+                        showError = true
+                        result = ""
                     }
                 },
-                shape = RoundedCornerShape(28.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Text("Calculate GPA", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Text(
-                    text = result,
-                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                    fontSize = 20.sp,
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Medium
-                )
+
+            if (result.isNotEmpty()) {
+                Spacer(Modifier.height(32.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Your GPA Result", style = MaterialTheme.typography.titleMedium)
+                        Text(text = result, fontSize = 48.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
             }
         }
     }
