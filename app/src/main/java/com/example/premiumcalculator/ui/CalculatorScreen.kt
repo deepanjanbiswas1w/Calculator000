@@ -3,8 +3,6 @@ package com.example.premiumcalculator.ui
 import android.content.Context
 import android.os.VibrationEffect
 import android.os.Vibrator
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -19,8 +17,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -42,7 +38,20 @@ fun CalculatorScreen(navController: NavController) {
     var showProTools by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
-    var showFactorialWarning by remember { mutableStateOf(false) }
+
+    // Auto-scaling Font Size Logic (Human eye readable limit)
+    val previewFontSize = when {
+        preview.length <= 7 -> 72.sp
+        preview.length <= 10 -> 52.sp
+        preview.length <= 14 -> 38.sp
+        else -> 28.sp
+    }
+    
+    val expressionFontSize = when {
+        expression.length <= 12 -> 42.sp
+        expression.length <= 20 -> 32.sp
+        else -> 24.sp
+    }
 
     if (showProTools) {
         ModalBottomSheet(
@@ -68,6 +77,8 @@ fun CalculatorScreen(navController: NavController) {
             CenterAlignedTopAppBar(
                 title = { Text("Calculator") },
                 actions = {
+                    // History Button added here!
+                    IconButton(onClick = { navController.navigate("history") }) { Icon(Icons.Default.History, "History") }
                     IconButton(onClick = { navController.navigate("settings") }) { Icon(Icons.Default.Settings, "Settings") }
                     IconButton(onClick = { showProTools = true }) { Icon(Icons.Default.Widgets, "Pro Tools") }
                 }
@@ -80,7 +91,7 @@ fun CalculatorScreen(navController: NavController) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = expression.ifEmpty { "0" },
-                        fontSize = 42.sp,
+                        fontSize = expressionFontSize,
                         fontWeight = FontWeight.Light,
                         textAlign = TextAlign.End,
                         maxLines = 1,
@@ -92,31 +103,21 @@ fun CalculatorScreen(navController: NavController) {
                 }
                 Text(
                     text = preview.ifEmpty { "0" },
-                    fontSize = 72.sp,
+                    fontSize = previewFontSize,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.End,
                     maxLines = 1,
                     modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
                 )
-                if (showFactorialWarning) {
-                    Text(text = "⚠️ Result may be extremely large (>20!)", color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
-                }
                 Spacer(Modifier.height(40.dp))
             }
 
-            // Keypad
+            // Keypad Grid (Fixed, no more jumping)
             LazyVerticalGrid(columns = GridCells.Fixed(4), contentPadding = PaddingValues(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.weight(3.4f)) {
                 items(keypadButtons) { btn ->
                     KeypadButton(btn) {
                         val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
                         vibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
-                        if (btn.command == "!") {
-                            val lastNum = expression.split(Regex("[+\\-×÷]")).lastOrNull()?.toIntOrNull() ?: 0
-                            if (lastNum > 20) {
-                                showFactorialWarning = true
-                                scope.launch { kotlinx.coroutines.delay(3000); showFactorialWarning = false }
-                            }
-                        }
                         viewModel.onButtonClick(btn.command)
                     }
                 }
@@ -125,11 +126,14 @@ fun CalculatorScreen(navController: NavController) {
     }
 }
 
+// ────────────────────────────────────────────────
+// ORIGINAL CLEAN 4x5 KEYPAD (ANIMATION REMOVED)
+// ────────────────────────────────────────────────
 private val keypadButtons = listOf(
-    KeypadButton("%", "%"), KeypadButton("^", "^"), KeypadButton("√", "√"), KeypadButton("!", "!"),
-    KeypadButton("7", "7"), KeypadButton("8", "8"), KeypadButton("9", "9"), KeypadButton("÷", "÷"),
-    KeypadButton("4", "4"), KeypadButton("5", "5"), KeypadButton("6", "6"), KeypadButton("×", "×"),
-    KeypadButton("1", "1"), KeypadButton("2", "2"), KeypadButton("3", "3"), KeypadButton("−", "−"),
+    KeypadButton("%", "%"), KeypadButton("^", "^"), KeypadButton("√", "√"), KeypadButton("÷", "÷"),
+    KeypadButton("7", "7"), KeypadButton("8", "8"), KeypadButton("9", "9"), KeypadButton("×", "×"),
+    KeypadButton("4", "4"), KeypadButton("5", "5"), KeypadButton("6", "6"), KeypadButton("−", "−"),
+    KeypadButton("1", "1"), KeypadButton("2", "2"), KeypadButton("3", "3"), KeypadButton("+", "+"),
     KeypadButton("0", "0"), KeypadButton(".", "."), KeypadButton("C", "C"), KeypadButton("=", "=")
 )
 
@@ -137,13 +141,10 @@ data class KeypadButton(val display: String, val command: String)
 
 @Composable
 private fun KeypadButton(btn: KeypadButton, onClick: () -> Unit) {
-    var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (pressed) 0.92f else 1f)
-    val isOperator = btn.display in listOf("÷", "×", "−", "+", "=", "%", "^", "√", "!")
+    val isOperator = btn.display in listOf("÷", "×", "−", "+", "=", "%", "^", "√")
     Button(
         onClick = onClick,
-        modifier = Modifier.aspectRatio(1f).graphicsLayer { scaleX = scale; scaleY = scale }
-            .pointerInput(Unit) { detectTapGestures(onPress = { pressed = true; tryAwaitRelease(); pressed = false }) },
+        modifier = Modifier.aspectRatio(1f),
         shape = RoundedCornerShape(24.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (isOperator) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
@@ -154,6 +155,9 @@ private fun KeypadButton(btn: KeypadButton, onClick: () -> Unit) {
     }
 }
 
+// ────────────────────────────────────────────────
+// PRO TOOLS (12 items with Factorial, ANIMATION REMOVED)
+// ────────────────────────────────────────────────
 private val proTools = listOf(
     ProTool(Icons.Default.Cake, "Age Calculator", "age"),
     ProTool(Icons.Default.Calculate, "EMI Calculator", "emi"),
@@ -165,11 +169,13 @@ private val proTools = listOf(
     ProTool(Icons.Default.AttachMoney, "Investment", "investment"),
     ProTool(Icons.Default.ShoppingCart, "Discount/Tax", "discount"),
     ProTool(Icons.Default.Landscape, "Land Converter", "land"),
-    ProTool(Icons.Default.Functions, "Equation Solver", "solver")
+    ProTool(Icons.Default.Functions, "Equation Solver", "solver"),
+    ProTool(Icons.Default.PriorityHigh, "Factorial (!)", "factorial")
 )
 
 data class ProTool(val icon: androidx.compose.ui.graphics.vector.ImageVector, val title: String, val route: String)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProToolCard(tool: ProTool, navController: NavController, onDismiss: () -> Unit) {
     Card(
@@ -178,10 +184,10 @@ private fun ProToolCard(tool: ProTool, navController: NavController, onDismiss: 
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Icon(tool.icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
-            Spacer(Modifier.height(12.dp))
-            Text(tool.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Column(modifier = Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Icon(tool.icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(44.dp))
+            Spacer(Modifier.height(8.dp))
+            Text(tool.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         }
     }
 }
