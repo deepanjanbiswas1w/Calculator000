@@ -101,6 +101,57 @@ class CalculatorViewModel @Inject constructor(
 
     private fun evaluateExpression(expr: String): BigDecimal {
         val normalized = expr.replace("×", "*").replace("÷", "/").replace("−", "-")
-        return try { BigDecimal(normalized) } catch(e: Exception) { BigDecimal.ZERO }
+        val tokens = mutableListOf<String>()
+        var currentNumber = ""
+
+        for (char in normalized) {
+            if (char.isDigit() || char == '.') {
+                currentNumber += char
+            } else {
+                if (currentNumber.isNotEmpty()) tokens.add(currentNumber)
+                tokens.add(char.toString())
+                currentNumber = ""
+            }
+        }
+        if (currentNumber.isNotEmpty()) tokens.add(currentNumber)
+
+        val output = java.util.ArrayDeque<BigDecimal>()
+        val ops = java.util.ArrayDeque<String>()
+        val precedence = mapOf("+" to 1, "-" to 1, "*" to 2, "/" to 2, "^" to 3)
+
+        for (token in tokens) {
+            when {
+                token.toBigDecimalOrNull() != null -> output.addLast(token.toBigDecimal())
+                token == "%" -> {
+                    if (output.isNotEmpty()) {
+                        val v = output.removeLast()
+                        output.addLast(v.divide(BigDecimal("100"), java.math.MathContext.DECIMAL128))
+                    }
+                }
+                precedence.containsKey(token) -> {
+                    while (ops.isNotEmpty() && precedence.getOrDefault(ops.last(), 0) >= precedence[token]!!) {
+                        applyOp(output, ops.removeLast())
+                    }
+                    ops.addLast(token)
+                }
+            }
+        }
+        while (ops.isNotEmpty()) applyOp(output, ops.removeLast())
+        return if (output.isEmpty()) BigDecimal.ZERO else output.first()
+    }
+
+    private fun applyOp(output: java.util.ArrayDeque<BigDecimal>, op: String) {
+        if (output.size < 2) return
+        val b = output.removeLast()
+        val a = output.removeLast()
+        val res = when (op) {
+            "+" -> a.add(b)
+            "-" -> a.subtract(b)
+            "*" -> a.multiply(b)
+            "/" -> if (b.compareTo(BigDecimal.ZERO) == 0) throw java.lang.ArithmeticException("Div zero") else a.divide(b, java.math.MathContext.DECIMAL128)
+            "^" -> BigDecimal(Math.pow(a.toDouble(), b.toDouble()))
+            else -> BigDecimal.ZERO
+        }
+        output.addLast(res)
     }
 }

@@ -31,14 +31,14 @@ fun FactorialScreen(navController: NavController) {
         Column(modifier = Modifier.padding(padding).padding(16.dp)) {
             OutlinedTextField(
                 value = input,
-                onValueChange = { if(it.length <= 3) input = it },
-                label = { Text("Enter a number (Max 170)") },
+                onValueChange = { if(it.length <= 4) input = it },
+                label = { Text("Enter a number (Max 5000)") },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(16.dp))
             Button(onClick = {
                 val n = input.toIntOrNull() ?: 0
-                if (n > 170) {
+                if (n > 5000) {
                     result = "Too Large!"
                 } else {
                     var fact = BigInteger.ONE
